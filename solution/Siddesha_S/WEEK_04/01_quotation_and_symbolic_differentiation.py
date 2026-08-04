@@ -13,63 +13,82 @@ type Expression = int | float | str | tuple[str, Expression, Expression]
 
 def is_number(expression: Expression) -> bool:
   """True if expression is a plain numeric literal (int or float), not a variable name or a compound expression."""
-  raise NotImplementedError
+  return isinstance(expression, (int, float))
 
 
 def is_variable(expression: Expression) -> bool:
   """True if expression is a bare variable name, represented as a str that is not one of the compound-expression tags ('+' or '*')."""
-  raise NotImplementedError
+  return isinstance(expression, str) and expression not in ('+', '*')
 
 
 def is_same_variable(first_variable: Expression, second_variable: Expression) -> bool:
   """True if both arguments are variables (per is_variable) and name the same variable."""
-  raise NotImplementedError
+  return is_variable(first_variable) and is_variable(second_variable) and first_variable == second_variable
 
 
 def is_sum(expression: Expression) -> bool:
   """True if expression is a compound sum expression, i.e. a 3-tuple whose first element is the tag '+'."""
-  raise NotImplementedError
+  return isinstance(expression, tuple) and len(expression) == 3 and expression[0] == '+'
 
 
 def make_sum(addend: Expression, augend: Expression) -> Expression:
   """Constructor. No simplification is required (e.g. make_sum(0, x) need not simplify to x)."""
-  raise NotImplementedError
+  return ('+', addend, augend)
 
 
 def addend(sum_expression: Expression) -> Expression:
   """Selector. Only valid when is_sum(sum_expression) is True."""
-  raise NotImplementedError
-
+  return sum_expression[1]
 
 def augend(sum_expression: Expression) -> Expression:
   """Selector. Only valid when is_sum(sum_expression) is True."""
-  raise NotImplementedError
+  return sum_expression[2]
 
 
 def is_product(expression: Expression) -> bool:
   """True if expression is a compound product expression, i.e. a 3-tuple whose first element is the tag '*'."""
-  raise NotImplementedError
+  return (
+    isinstance(expression, tuple)
+    and len(expression) == 3
+    and expression[0] == '*'
+  )
 
 
 def make_product(multiplier: Expression, multiplicand: Expression) -> Expression:
   """Constructor. No simplification is required (e.g. make_product(1, x) need not simplify to x)."""
-  raise NotImplementedError
+  return ('*', multiplier, multiplicand)
 
 
 def multiplier(product_expression: Expression) -> Expression:
   """Selector. Only valid when is_product(product_expression) is True."""
-  raise NotImplementedError
+  return product_expression[1]
 
 
 def multiplicand(product_expression: Expression) -> Expression:
   """Selector. Only valid when is_product(product_expression) is True."""
-  raise NotImplementedError
+  return product_expression[2]
 
 
 def derivative(expression: Expression, variable_name: str) -> Expression:
   """Symbolically differentiate expression with respect to variable_name and return the resulting expression, unsimplified is fine. Rules: d/dx(c) = 0 for a number c; d/dx(x) = 1 if same variable else 0; d/dx(u + v) = d/dx(u) + d/dx(v); d/dx(u * v) = u * d/dx(v) + v * d/dx(u), using the un-differentiated other factor."""
-  raise NotImplementedError
-
+  if is_number(expression):
+    return 0
+  if is_variable(expression):
+    if is_same_variable(expression, variable_name):
+      return 1
+    else:
+      return 0
+  if is_sum(expression):
+    return make_sum(
+      derivative(addend(expression), variable_name),
+      derivative(augend(expression), variable_name)
+    )
+  if is_product(expression):
+    return make_sum(
+      make_product(multiplier(expression), derivative(multiplicand(expression), variable_name)),
+      make_product(multiplicand(expression), derivative(multiplier(expression), variable_name))
+    )
+  raise ValueError(f"Invalid expression: {expression}")
 
 """
 REAL-WORLD SEQUENCE TASK
